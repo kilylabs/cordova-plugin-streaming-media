@@ -4,6 +4,7 @@
 #import <AVKit/AVKit.h>
 #import "LandscapeVideo.h"
 #import "PortraitVideo.h"
+#import "AVQueuePlayerPrevious.h"
 
 @interface StreamingMedia()
 - (void)parseOptions:(NSDictionary *) options type:(NSString *) type;
@@ -14,6 +15,7 @@
 - (void)startPlayer:(NSString*)uri;
 - (void)moviePlayBackDidFinish:(NSNotification*)notification;
 - (void)timerTick:(NSTimer*)timer;
+- (void)respondToSwipeGesture:(UISwipeGestureRecognizer *)sender;
 - (void)sendResult:(NSString*)errorMsg;
 - (void)cleanup;
 @end
@@ -27,7 +29,8 @@
     BOOL initFullscreen;
     NSString *mOrientation;
     NSString *videoType;
-    AVPlayer *movie;
+    AVQueuePlayerPrevious *movie;
+    NSTimer *timer;
 }
 
 NSString * const TYPE_VIDEO = @"VIDEO";
@@ -206,7 +209,13 @@ NSString * const DEFAULT_IMAGE_SCALE = @"center";
 -(void)startPlayer:(NSString*)uri {
     NSLog(@"startplayer called");
     NSURL *url             =  [NSURL URLWithString:uri];
-    movie                  =  [AVPlayer playerWithURL:url];
+    
+    AVPlayerItem *item1 = [AVPlayerItem playerItemWithURL:[NSURL URLWithString:@"https://videodelivery.net/541af977a0b5986d66f4496e87869ad5/manifest/video.m3u8"]];
+    AVPlayerItem *item2 = [AVPlayerItem playerItemWithURL:[NSURL URLWithString:@"https://videodelivery.net/e45875bbe7858ffe1ca630f0bec2e13f/manifest/video.m3u8"]];
+    AVPlayerItem *item3 = [AVPlayerItem playerItemWithURL:[NSURL URLWithString:@"https://videodelivery.net/49337f2ce838047a218994989f8cacff/manifest/video.m3u8"]];
+    
+    movie = [[AVQueuePlayerPrevious alloc] initWithItems:@[item1, item2, item3]];
+    //movie                  =  [AVQueuePlayer playerWithURL:url];
     
     // handle orientation
     [self handleOrientation];
@@ -222,7 +231,7 @@ NSString * const DEFAULT_IMAGE_SCALE = @"center";
     
     // present modally so we get a close button
     [self.viewController presentViewController:moviePlayer animated:YES completion:^(void){
-        [moviePlayer.player play];
+        [self->moviePlayer.player play];
     }];
     
     // add audio image and background color
@@ -280,7 +289,7 @@ NSString * const DEFAULT_IMAGE_SCALE = @"center";
      object:nil];
      */
 
-    [NSTimer scheduledTimerWithTimeInterval:0.2
+    timer = [NSTimer scheduledTimerWithTimeInterval:0.2
                                      target:self
                                    selector:@selector(timerTick:)
                                    userInfo:nil
@@ -314,6 +323,35 @@ NSString * const DEFAULT_IMAGE_SCALE = @"center";
         if ([recognizer isKindOfClass:[UISwipeGestureRecognizer class]]) {
             [contentView removeGestureRecognizer:recognizer];
         }
+    }
+    
+    UISwipeGestureRecognizer *swipeRight = [[UISwipeGestureRecognizer alloc] initWithTarget: self action: @selector(respondToSwipeGesture:)];
+    swipeRight.direction = UISwipeGestureRecognizerDirectionRight;
+    [contentView addGestureRecognizer:swipeRight];
+    
+    UISwipeGestureRecognizer *swipeLeft = [[UISwipeGestureRecognizer alloc] initWithTarget: self action: @selector(respondToSwipeGesture:)];
+    swipeLeft.direction = UISwipeGestureRecognizerDirectionLeft;
+    [contentView addGestureRecognizer:swipeLeft];
+
+    
+}
+
+- (void) respondToSwipeGesture:(UISwipeGestureRecognizer *)sender {
+    if ( sender.direction == UISwipeGestureRecognizerDirectionLeft ){
+        NSLog(@" *** SWIPE LEFT ***");
+        [movie advanceToNextItem];
+    }
+    if ( sender.direction == UISwipeGestureRecognizerDirectionRight ){
+        NSLog(@" *** SWIPE RIGHT ***");
+        
+    }
+    if ( sender.direction== UISwipeGestureRecognizerDirectionUp ){
+        NSLog(@" *** SWIPE UP ***");
+        
+    }
+    if ( sender.direction == UISwipeGestureRecognizerDirectionDown ){
+        NSLog(@" *** SWIPE DOWN ***");
+        
     }
 }
 
@@ -367,7 +405,7 @@ NSString * const DEFAULT_IMAGE_SCALE = @"center";
 }
 
 - (void) sendResult:(NSString*)errorMsg {
-    if (shouldAutoClose || [errorMsg length] != 0) {
+    if (false || [errorMsg length] != 0) {
         [self cleanup];
         CDVPluginResult* pluginResult;
         if ([errorMsg length] != 0) {
@@ -380,12 +418,10 @@ NSString * const DEFAULT_IMAGE_SCALE = @"center";
 }
 
 -(void) timerTick:(NSTimer*)timer {
-    NSLog(@"Checking for is closed");
+    //NSLog(@"Checking for is closed");
     if (moviePlayer.player.rate == 0 &&
         (moviePlayer.isBeingDismissed || moviePlayer.nextResponder == nil)) {
             [self sendResult:@""];
-            [timer invalidate];
-            timer = nil;
     }
 }
 
@@ -416,6 +452,11 @@ NSString * const DEFAULT_IMAGE_SCALE = @"center";
         [moviePlayer.player pause];
         [moviePlayer dismissViewControllerAnimated:YES completion:nil];
         moviePlayer = nil;
+    }
+    
+    if(timer) {
+        [timer invalidate];
+        timer = nil;
     }
 }
 @end
