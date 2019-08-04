@@ -13,6 +13,8 @@
 - (UIImage*)getImage: (NSString *)imageName;
 - (void)startPlayer:(NSString*)uri;
 - (void)moviePlayBackDidFinish:(NSNotification*)notification;
+- (void)timerTick:(NSTimer*)timer;
+- (void)sendResult:(NSString*)errorMsg;
 - (void)cleanup;
 @end
 
@@ -277,6 +279,13 @@ NSString * const DEFAULT_IMAGE_SCALE = @"center";
      name:MPMoviePlayerWillExitFullscreenNotification
      object:nil];
      */
+
+    [NSTimer scheduledTimerWithTimeInterval:0.2
+                                     target:self
+                                   selector:@selector(timerTick:)
+                                   userInfo:nil
+                                    repeats:YES];
+
 }
 
 - (void) handleGestures {
@@ -354,6 +363,10 @@ NSString * const DEFAULT_IMAGE_SCALE = @"center";
         NSLog(@"Playback failed: %@", errorMsg);
     }
     
+    [self sendResult: errorMsg];
+}
+
+- (void) sendResult:(NSString*)errorMsg {
     if (shouldAutoClose || [errorMsg length] != 0) {
         [self cleanup];
         CDVPluginResult* pluginResult;
@@ -363,6 +376,16 @@ NSString * const DEFAULT_IMAGE_SCALE = @"center";
             pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsBool:true];
         }
         [self.commandDelegate sendPluginResult:pluginResult callbackId:callbackId];
+    }
+}
+
+-(void) timerTick:(NSTimer*)timer {
+    NSLog(@"Checking for is closed");
+    if (moviePlayer.player.rate == 0 &&
+        (moviePlayer.isBeingDismissed || moviePlayer.nextResponder == nil)) {
+            [self sendResult:@""];
+            [timer invalidate];
+            timer = nil;
     }
 }
 
