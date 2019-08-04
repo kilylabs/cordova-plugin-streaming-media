@@ -36,6 +36,7 @@
 // Two methods need to be added to the AVQueuePlayer: one which will play the last song in the queue, and one which will return if the queue is at the beginning (in case the user wishes to implement special behavior when a queue is at its first item, such as restarting a song). A getIndex method to return the current index is also provided.
 -(void)playPreviousItem;
 -(Boolean)isAtBeginning;
+-(Boolean)isAtEnd;
 -(int)getIndex;
 
 // This notification is called whenever an item finishes playing; it advances the now playing index by 1.

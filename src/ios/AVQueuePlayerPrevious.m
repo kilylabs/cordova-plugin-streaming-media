@@ -101,6 +101,18 @@
     }
 }
 
+-(Boolean)isAtEnd
+{
+    // This function simply returns whether or not the AVQueuePlayerPrevious is at the first song. This is
+    // useful for implementing custom behavior if the user tries to play a previous song at the start of
+    // the queue (such as restarting the song).
+    if (nowPlayingIndex == [_itemsForPlayer count] - 1){
+        return YES;
+    } else {
+        return NO;
+    }
+}
+
 -(int)getIndex
 {
     // This method simply returns the now playing index

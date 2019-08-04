@@ -208,13 +208,20 @@ NSString * const DEFAULT_IMAGE_SCALE = @"center";
 
 -(void)startPlayer:(NSString*)uri {
     NSLog(@"startplayer called");
-    NSURL *url             =  [NSURL URLWithString:uri];
+    //NSURL *url             =  [NSURL URLWithString:uri];
     
-    AVPlayerItem *item1 = [AVPlayerItem playerItemWithURL:[NSURL URLWithString:@"https://videodelivery.net/541af977a0b5986d66f4496e87869ad5/manifest/video.m3u8"]];
-    AVPlayerItem *item2 = [AVPlayerItem playerItemWithURL:[NSURL URLWithString:@"https://videodelivery.net/e45875bbe7858ffe1ca630f0bec2e13f/manifest/video.m3u8"]];
-    AVPlayerItem *item3 = [AVPlayerItem playerItemWithURL:[NSURL URLWithString:@"https://videodelivery.net/49337f2ce838047a218994989f8cacff/manifest/video.m3u8"]];
+    NSArray *urls = [uri componentsSeparatedByString:@"|"];   //take the one array for split the string
+    NSMutableArray *items = [NSMutableArray new];
     
-    movie = [[AVQueuePlayerPrevious alloc] initWithItems:@[item1, item2, item3]];
+    int i;
+    int count;
+    
+    for (i = 0, count = [urls count]; i < count; i = i + 1)
+    {
+        [items addObject:[AVPlayerItem playerItemWithURL:[NSURL URLWithString:[urls objectAtIndex:i]]]];
+    }
+    
+    movie = [[AVQueuePlayerPrevious alloc] initWithItems:items];
     //movie                  =  [AVQueuePlayer playerWithURL:url];
     
     // handle orientation
@@ -340,10 +347,13 @@ NSString * const DEFAULT_IMAGE_SCALE = @"center";
     if ( sender.direction == UISwipeGestureRecognizerDirectionLeft ){
         NSLog(@" *** SWIPE LEFT ***");
         [movie advanceToNextItem];
+        if([movie isAtEnd]) {
+            [self sendResult:@""];
+        }
     }
     if ( sender.direction == UISwipeGestureRecognizerDirectionRight ){
         NSLog(@" *** SWIPE RIGHT ***");
-        
+        [movie playPreviousItem];
     }
     if ( sender.direction== UISwipeGestureRecognizerDirectionUp ){
         NSLog(@" *** SWIPE UP ***");
@@ -405,7 +415,7 @@ NSString * const DEFAULT_IMAGE_SCALE = @"center";
 }
 
 - (void) sendResult:(NSString*)errorMsg {
-    if (false || [errorMsg length] != 0) {
+//    if (false || [errorMsg length] != 0) {
         [self cleanup];
         CDVPluginResult* pluginResult;
         if ([errorMsg length] != 0) {
@@ -413,8 +423,9 @@ NSString * const DEFAULT_IMAGE_SCALE = @"center";
         } else {
             pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsBool:true];
         }
+        NSLog(@"Sending result %@", pluginResult);
         [self.commandDelegate sendPluginResult:pluginResult callbackId:callbackId];
-    }
+//    }
 }
 
 -(void) timerTick:(NSTimer*)timer {
